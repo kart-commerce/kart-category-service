@@ -2,6 +2,7 @@ using KartCategoryService.Api.Common;
 using KartCategoryService.Api.Security;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Application.Features.CreateCategory;
+using KartCategoryService.Application.Features.DeprecateCategory;
 using KartCategoryService.Application.Features.ListCategories;
 using KartCategoryService.Application.Features.MoveCategory;
 using KartCategoryService.Application.Features.RenameCategory;
@@ -80,6 +81,18 @@ public sealed class CategoriesController : ControllerBase
     {
         var result = await _sender.Send(new MoveCategoryCommand(categoryId, request.NewParentId), cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
+    }
+
+    /// <summary>api-contract.yaml deprecateCategory - DELETE /v1/categories/{categoryId} (RBAC-gated, Admin only).</summary>
+    [HttpDelete("{categoryId:guid}")]
+    [Authorize(Policy = AuthenticationExtensions.AdminPolicy)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeprecateCategory([FromRoute] Guid categoryId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new DeprecateCategoryCommand(categoryId), cancellationToken);
+        return result.IsSuccess ? NoContent() : this.MapFailure(result.Error);
     }
 }
 
