@@ -3,6 +3,7 @@ using KartCategoryService.Api.Security;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Application.Features.CreateCategory;
 using KartCategoryService.Application.Features.ListCategories;
+using KartCategoryService.Application.Features.RenameCategory;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -48,7 +49,25 @@ public sealed class CategoriesController : ControllerBase
             result,
             category => CreatedAtAction(nameof(ListCategories), new { parentId = category.ParentId }, category));
     }
+
+    /// <summary>api-contract.yaml renameCategory - PATCH /v1/categories/{categoryId} (RBAC-gated, Admin only).</summary>
+    [HttpPatch("{categoryId:guid}")]
+    [Authorize(Policy = AuthenticationExtensions.AdminPolicy)]
+    [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CategoryDto>> RenameCategory(
+        [FromRoute] Guid categoryId,
+        [FromBody] RenameCategoryRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new RenameCategoryCommand(categoryId, request.Name), cancellationToken);
+        return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
+    }
 }
 
 /// <summary>api-contract.yaml createCategory requestBody shape.</summary>
 public sealed record CreateCategoryRequest(string Name, Guid? ParentId);
+
+/// <summary>api-contract.yaml renameCategory requestBody shape.</summary>
+public sealed record RenameCategoryRequest(string Name);
