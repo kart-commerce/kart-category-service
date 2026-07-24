@@ -1,0 +1,35 @@
+using KartCategoryService.Infrastructure.Messaging;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace KartCategoryService.Infrastructure.Persistence.Configurations;
+
+/// <summary>Maps CategoryOutboxEvent to `category_outbox_events` exactly as database-design.md specifies.</summary>
+public sealed class CategoryOutboxEventConfiguration : IEntityTypeConfiguration<CategoryOutboxEvent>
+{
+    public void Configure(EntityTypeBuilder<CategoryOutboxEvent> builder)
+    {
+        builder.ToTable("category_outbox_events");
+
+        builder.HasKey(e => e.OutboxId);
+        builder.Property(e => e.OutboxId).HasColumnName("outbox_id").ValueGeneratedNever();
+
+        builder.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
+        builder.Property(e => e.EventType).HasColumnName("event_type").HasColumnType("text").IsRequired();
+        builder.Property(e => e.Payload).HasColumnName("payload").HasColumnType("jsonb").IsRequired();
+        builder.Property(e => e.OccurredAt).HasColumnName("occurred_at").IsRequired();
+        builder.Property(e => e.PublishedAt).HasColumnName("published_at");
+        builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("text").IsRequired();
+        builder.Property(e => e.UpdatedBy).HasColumnName("updated_by").HasColumnType("text").IsRequired();
+
+        builder.HasOne<Domain.Categories.Category>()
+            .WithMany()
+            .HasForeignKey(e => e.CategoryId)
+            .HasConstraintName("FK_category_outbox_events_category_id")
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(e => e.OccurredAt)
+            .HasDatabaseName("idx_category_outbox_unpublished")
+            .HasFilter("published_at IS NULL");
+    }
+}

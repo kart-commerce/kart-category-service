@@ -1,17 +1,21 @@
 using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Domain.Categories;
+using KartCategoryService.Infrastructure.Messaging;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace KartCategoryService.ContractTests;
 
 /// <summary>
-/// Boots the real Api + Application pipeline but swaps PostgreSQL/Redis for in-memory fakes -
-/// these tests check the HTTP wire contract (status codes, JSON field names) against
-/// api-contract.yaml, not persistence/caching behavior (already covered by UnitTests/IntegrationTests).
+/// Boots the real Api + Application pipeline but swaps PostgreSQL/Redis for in-memory fakes and
+/// real Identity-issued JWT validation for a header-driven test scheme - these tests check the
+/// HTTP wire contract (status codes, JSON field names, RBAC gating) against api-contract.yaml,
+/// not persistence/caching/token-signing mechanics (already covered elsewhere).
 /// </summary>
 public sealed class CategoryContractTestFactory : WebApplicationFactory<Program>
 {
@@ -26,6 +30,26 @@ public sealed class CategoryContractTestFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<ICategoryCache>();
             services.AddSingleton<ICategoryCache, NullCategoryCache>();
+
+            services.RemoveAll<IUnitOfWork>();
+            services.AddSingleton<IUnitOfWork, NoOpUnitOfWork>();
+
+            // No real RabbitMQ in the contract-test environment - these tests assert HTTP shape,
+            // not event publication (already covered separately for CAT-2's outbox behavior).
+            var outboxRelay = services.FirstOrDefault(d => d.ImplementationType == typeof(OutboxRelayHostedService));
+            if (outboxRelay is not null)
+            {
+                services.Remove(outboxRelay);
+            }
+
+            services.AddAuthentication(TestAuthenticationHandler.SchemeName)
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(TestAuthenticationHandler.SchemeName, _ => { });
+            services.PostConfigure<AuthenticationOptions>(options =>
+            {
+                options.DefaultAuthenticateScheme = TestAuthenticationHandler.SchemeName;
+                options.DefaultChallengeScheme = TestAuthenticationHandler.SchemeName;
+                options.DefaultScheme = TestAuthenticationHandler.SchemeName;
+            });
         });
     }
 }
@@ -44,6 +68,18 @@ public sealed class InMemoryCategoryRepository : ICategoryRepository
 
         return Task.FromResult<IReadOnlyList<Category>>(query.OrderBy(c => c.Name).ToList());
     }
+
+    public Task<Category?> GetActiveByIdAsync(Guid categoryId, CancellationToken cancellationToken)
+    {
+        var match = Categories.FirstOrDefault(c => c.Id == categoryId && c.Status == CategoryStatus.Active);
+        return Task.FromResult(match);
+    }
+
+    public Task AddAsync(Category category, CancellationToken cancellationToken)
+    {
+        Categories.Add(category);
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>Always a miss - contract tests exercise the repository fallback path deterministically.</summary>
@@ -54,4 +90,10 @@ public sealed class NullCategoryCache : ICategoryCache
 
     public Task SetChildrenAsync(Guid? parentId, IReadOnlyList<CategoryDto> children, CancellationToken cancellationToken) =>
         Task.CompletedTask;
+}
+
+/// <summary>InMemoryCategoryRepository.AddAsync already applies the change synchronously - no real transaction to commit.</summary>
+public sealed class NoOpUnitOfWork : IUnitOfWork
+{
+    public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

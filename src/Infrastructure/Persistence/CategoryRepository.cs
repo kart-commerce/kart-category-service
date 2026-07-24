@@ -24,4 +24,15 @@ public sealed class CategoryRepository : ICategoryRepository
 
         return await query.OrderBy(c => c.Name).ToListAsync(cancellationToken);
     }
+
+    public async Task<Category?> GetActiveByIdAsync(Guid categoryId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Categories
+            .FirstOrDefaultAsync(c => c.Id == categoryId && c.Status == CategoryStatus.Active, cancellationToken);
+    }
+
+    public async Task AddAsync(Category category, CancellationToken cancellationToken)
+    {
+        await _dbContext.Categories.AddAsync(category, cancellationToken);
+    }
 }

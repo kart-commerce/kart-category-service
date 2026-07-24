@@ -1,3 +1,4 @@
+using KartCategoryService.Api.Security;
 using KartCategoryService.Application;
 using KartCategoryService.Infrastructure;
 
@@ -12,6 +13,7 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddCategoryAuthentication();
 
 var app = builder.Build();
 
@@ -24,6 +26,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -16,4 +16,9 @@ public interface ICategoryRepository
     /// bypasses the write-through cache entirely.
     /// </summary>
     Task<IReadOnlyList<Category>> GetChildrenAsync(Guid? parentId, bool includeDeprecated, CancellationToken cancellationToken);
+
+    /// <summary>Null if the category does not exist or is deprecated - api-contract.yaml's uniform 404 for both.</summary>
+    Task<Category?> GetActiveByIdAsync(Guid categoryId, CancellationToken cancellationToken);
+
+    Task AddAsync(Category category, CancellationToken cancellationToken);
 }
