@@ -21,4 +21,20 @@ public interface ICategoryRepository
     Task<Category?> GetActiveByIdAsync(Guid categoryId, CancellationToken cancellationToken);
 
     Task AddAsync(Category category, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Locks the row (SELECT ... FOR UPDATE) for the duration of the caller's transaction - must
+    /// run inside a transaction opened via IUnitOfWork.BeginTransactionAsync (design-decisions.md,
+    /// "Concurrency Control for Hierarchy Mutations"). Null if no row exists for this id at all;
+    /// status is left to the caller/domain to check (MoveCategory needs to distinguish "not found"
+    /// from "found but not active" itself).
+    /// </summary>
+    Task<Category?> GetForUpdateAsync(Guid categoryId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Locks (SELECT ... FOR UPDATE) every active category whose ancestor_path contains categoryId -
+    /// the moved subtree's descendants, whose AncestorPath/Depth a move updates as one operation
+    /// (ddd-model.md). Must run inside the same transaction as GetForUpdateAsync above.
+    /// </summary>
+    Task<IReadOnlyList<Category>> GetDescendantsForUpdateAsync(Guid categoryId, CancellationToken cancellationToken);
 }

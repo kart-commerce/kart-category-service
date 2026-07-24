@@ -80,6 +80,20 @@ public sealed class InMemoryCategoryRepository : ICategoryRepository
         Categories.Add(category);
         return Task.CompletedTask;
     }
+
+    public Task<Category?> GetForUpdateAsync(Guid categoryId, CancellationToken cancellationToken)
+    {
+        var match = Categories.FirstOrDefault(c => c.Id == categoryId);
+        return Task.FromResult(match);
+    }
+
+    public Task<IReadOnlyList<Category>> GetDescendantsForUpdateAsync(Guid categoryId, CancellationToken cancellationToken)
+    {
+        var descendants = Categories
+            .Where(c => c.Status == CategoryStatus.Active && c.AncestorPath.Contains(categoryId))
+            .ToList();
+        return Task.FromResult<IReadOnlyList<Category>>(descendants);
+    }
 }
 
 /// <summary>Always a miss - contract tests exercise the repository fallback path deterministically.</summary>
@@ -96,4 +110,10 @@ public sealed class NullCategoryCache : ICategoryCache
 public sealed class NoOpUnitOfWork : IUnitOfWork
 {
     public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task BeginTransactionAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task CommitTransactionAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task RollbackTransactionAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

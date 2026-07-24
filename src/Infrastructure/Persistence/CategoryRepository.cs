@@ -35,4 +35,18 @@ public sealed class CategoryRepository : ICategoryRepository
     {
         await _dbContext.Categories.AddAsync(category, cancellationToken);
     }
+
+    public async Task<Category?> GetForUpdateAsync(Guid categoryId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Categories
+            .FromSqlInterpolated($"SELECT * FROM categories WHERE category_id = {categoryId} FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Category>> GetDescendantsForUpdateAsync(Guid categoryId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Categories
+            .FromSqlInterpolated($"SELECT * FROM categories WHERE {categoryId} = ANY(ancestor_path) AND status = 'active' FOR UPDATE")
+            .ToListAsync(cancellationToken);
+    }
 }

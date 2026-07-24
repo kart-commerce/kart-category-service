@@ -3,6 +3,7 @@ using KartCategoryService.Api.Security;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Application.Features.CreateCategory;
 using KartCategoryService.Application.Features.ListCategories;
+using KartCategoryService.Application.Features.MoveCategory;
 using KartCategoryService.Application.Features.RenameCategory;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -64,6 +65,22 @@ public sealed class CategoriesController : ControllerBase
         var result = await _sender.Send(new RenameCategoryCommand(categoryId, request.Name), cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
+
+    /// <summary>api-contract.yaml moveCategory - POST /v1/categories/{categoryId}/move (RBAC-gated, Admin only).</summary>
+    [HttpPost("{categoryId:guid}/move")]
+    [Authorize(Policy = AuthenticationExtensions.AdminPolicy)]
+    [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CategoryDto>> MoveCategory(
+        [FromRoute] Guid categoryId,
+        [FromBody] MoveCategoryRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new MoveCategoryCommand(categoryId, request.NewParentId), cancellationToken);
+        return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
+    }
 }
 
 /// <summary>api-contract.yaml createCategory requestBody shape.</summary>
@@ -71,3 +88,6 @@ public sealed record CreateCategoryRequest(string Name, Guid? ParentId);
 
 /// <summary>api-contract.yaml renameCategory requestBody shape.</summary>
 public sealed record RenameCategoryRequest(string Name);
+
+/// <summary>api-contract.yaml moveCategory requestBody shape.</summary>
+public sealed record MoveCategoryRequest(Guid? NewParentId);
