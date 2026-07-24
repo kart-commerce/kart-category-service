@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    # kart-conventions.md: "CI: service repos call the reusable workflow published from kart-devops."
+    # kart-devops has not published a reusable workflow yet (repo currently empty besides README/.gitignore) -
+    # this call is a placeholder against the documented convention and must be corrected once that
+    # workflow exists (see final implementation report - flagged gap).
+    uses: kart-commerce/kart-devops/.github/workflows/dotnet-service-ci.yml@main
+    with:
+      dotnet-version: "8.0.x"
+      solution-path: KartCategoryService.sln
