@@ -29,4 +29,8 @@
     <ProjectReference Include="..\..\src\Api\KartCategoryService.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Fixtures\api-contract.yaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
