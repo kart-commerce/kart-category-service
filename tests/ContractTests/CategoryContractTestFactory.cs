@@ -36,11 +36,8 @@ public sealed class CategoryContractTestFactory : WebApplicationFactory<Program>
 
             // No real RabbitMQ in the contract-test environment - these tests assert HTTP shape,
             // not event publication (already covered separately for CAT-2's outbox behavior).
-            var outboxRelay = services.FirstOrDefault(d => d.ImplementationType == typeof(OutboxRelayHostedService));
-            if (outboxRelay is not null)
-            {
-                services.Remove(outboxRelay);
-            }
+            RemoveHostedService<RabbitMqTopologyStartupHostedService>(services);
+            RemoveHostedService<OutboxRelayHostedService>(services);
 
             services.AddAuthentication(TestAuthenticationHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(TestAuthenticationHandler.SchemeName, _ => { });
@@ -51,6 +48,16 @@ public sealed class CategoryContractTestFactory : WebApplicationFactory<Program>
                 options.DefaultScheme = TestAuthenticationHandler.SchemeName;
             });
         });
+    }
+
+    private static void RemoveHostedService<T>(IServiceCollection services)
+        where T : class, IHostedService
+    {
+        var descriptor = services.FirstOrDefault(d => d.ImplementationType == typeof(T));
+        if (descriptor is not null)
+        {
+            services.Remove(descriptor);
+        }
     }
 }
 

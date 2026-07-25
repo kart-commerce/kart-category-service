@@ -1,0 +1,13 @@
+{
+  "service": "kart-category-service",
+  "exchanges": [
+    { "name": "category.exchange", "type": "topic", "durable": true }
+  ],
+  "externalExchanges": [],
+  "publishedEvents": [
+    { "eventType": "CategoryUpdated", "exchange": "category.exchange", "routingKey": "category.category.updated" }
+  ],
+  "queues": [],
+  "deadLetterQueues": [],
+  "_comment": "Source of truth for this service's entire RabbitMQ topology (event-contract.md). Nothing here is hardcoded in C# - RabbitMqTopologyProvisioner scans this file and declares every exchange/queue/binding/DLQ/retry-tier at startup. Category consumes zero events (event-contract.md, 'Consumed Events: None'), so queues/deadLetterQueues are empty here - category.category-updated.dlq belongs to Analytics' own consumer queue, not to this service's topology."
+}

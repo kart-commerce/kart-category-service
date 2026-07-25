@@ -4,17 +4,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 
 namespace KartCategoryService.Infrastructure.Messaging;
 
 /// <summary>
 /// Relays category_outbox_events rows to category.exchange (design-decisions.md, "Reliable Event
-/// Publication for CategoryUpdated"). Declares the exchange idempotently at startup
-/// (message-bus-manifest.json - topic, durable; Category owns no consumer queues of its own,
-/// Analytics binds its own queue+DLQ). Connects lazily with its own retry loop so a RabbitMQ
-/// outage at boot degrades publish latency, never crashes the Api process.
+/// Publication for CategoryUpdated"). Re-declares the manifest's topology idempotently on every
+/// (re)connect (message-bus-manifest.json - topic, durable; Category owns no consumer queues of
+/// its own, Analytics binds its own queue+DLQ). Connects lazily with its own retry loop so a
+/// RabbitMQ outage at boot degrades publish latency, never crashes the Api process.
 /// </summary>
 public sealed class OutboxRelayHostedService : BackgroundService
 {
@@ -24,18 +23,18 @@ public sealed class OutboxRelayHostedService : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConnectionFactory _connectionFactory;
-    private readonly RabbitMqOptions _options;
+    private readonly MessageBusManifest _manifest;
     private readonly ILogger<OutboxRelayHostedService> _logger;
 
     public OutboxRelayHostedService(
         IServiceScopeFactory scopeFactory,
         IConnectionFactory connectionFactory,
-        IOptions<RabbitMqOptions> options,
+        MessageBusManifest manifest,
         ILogger<OutboxRelayHostedService> logger)
     {
         _scopeFactory = scopeFactory;
         _connectionFactory = connectionFactory;
-        _options = options.Value;
+        _manifest = manifest;
         _logger = logger;
     }
 
@@ -47,7 +46,7 @@ public sealed class OutboxRelayHostedService : BackgroundService
             {
                 using var connection = _connectionFactory.CreateConnection();
                 using var channel = connection.CreateModel();
-                channel.ExchangeDeclare(_options.Exchange, ExchangeType.Topic, durable: true);
+                RabbitMqTopologyProvisioner.Declare(channel, _manifest);
 
                 await RunRelayLoopAsync(channel, stoppingToken);
             }
@@ -96,8 +95,8 @@ public sealed class OutboxRelayHostedService : BackgroundService
             properties.ContentType = "application/json";
 
             channel.BasicPublish(
-                exchange: _options.Exchange,
-                routingKey: RoutingKeyFor(outboxEvent.EventType),
+                exchange: _manifest.ExchangeFor(outboxEvent.EventType),
+                routingKey: _manifest.RoutingKeyFor(outboxEvent.EventType),
                 basicProperties: properties,
                 body: Encoding.UTF8.GetBytes(outboxEvent.Payload));
 
@@ -106,10 +105,4 @@ public sealed class OutboxRelayHostedService : BackgroundService
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
-
-    private static string RoutingKeyFor(string eventType) => eventType switch
-    {
-        CategoryOutboxEvent.CategoryUpdatedEventType => "category.category.updated",
-        _ => throw new InvalidOperationException($"No routing key mapping for outbox event type '{eventType}'."),
-    };
 }
