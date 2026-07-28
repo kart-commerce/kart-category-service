@@ -1,13 +1,19 @@
 using KartCategoryService.Api.Middleware;
-using KartCategoryService.Api.Observability;
 using KartCategoryService.Api.Security;
 using KartCategoryService.Application;
 using KartCategoryService.Infrastructure;
+using Kart.Shared.Configuration;
+using Kart.Shared.Observability;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddObservability();
+// kart-conventions.md Configuration Management: GlobalConfig external-secrets-file bootstrap,
+// shared across every service - never reimplemented per service. See appsettings.Local.json.example.
+builder.AddKartGlobalConfig();
+
+// kart-conventions.md Observability section: Serilog + OpenTelemetry SDK behind one DI call.
+builder.AddKartObservability("kart-category-service");
 
 // Add services to the container.
 

@@ -22,6 +22,10 @@ publish/
 
 # User-specific secrets (never commit real values)
 appsettings.*.local.json
+
+# Per-developer local overrides (currently just GlobalConfig:Path) — machine-specific,
+# never committed. Commit appsettings.Local.json.example instead.
+appsettings.Local.json
 .env
 .env.*
 !.env.example
