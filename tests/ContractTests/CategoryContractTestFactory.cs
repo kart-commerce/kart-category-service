@@ -1,3 +1,4 @@
+using Kart.Shared.Messaging;
 using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Domain.Categories;

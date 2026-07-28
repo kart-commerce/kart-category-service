@@ -1,3 +1,4 @@
+using Kart.Shared.Messaging;
 using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Infrastructure.Caching;
 using KartCategoryService.Infrastructure.Messaging;
@@ -7,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using RabbitMQ.Client;
 using StackExchange.Redis;
 
 namespace KartCategoryService.Infrastructure;
@@ -37,20 +37,13 @@ public static class DependencyInjection
         // startup - RabbitMqTopologyStartupHostedService and OutboxRelayHostedService each
         // own their own retrying connection.
         services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMq"));
-        services.AddSingleton(sp =>
+        services.AddKartMessageBusManifest(sp => sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value.ManifestPath);
+        services.AddKartRabbitMqConnectionFactory(sp =>
         {
             var options = sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
-            var manifestPath = Path.IsPathRooted(options.ManifestPath)
-                ? options.ManifestPath
-                : Path.Combine(AppContext.BaseDirectory, options.ManifestPath);
-            return MessageBusManifestLoader.Load(manifestPath);
+            return new RabbitMqConnectionSettings(options.HostName);
         });
-        services.AddSingleton<IConnectionFactory>(_ => new ConnectionFactory
-        {
-            HostName = configuration["RabbitMq:HostName"] ?? "localhost",
-            DispatchConsumersAsync = true,
-        });
-        services.AddHostedService<RabbitMqTopologyStartupHostedService>();
+        services.AddKartRabbitMqTopologyStartup();
         services.AddHostedService<OutboxRelayHostedService>();
 
         return services;
