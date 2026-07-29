@@ -21,6 +21,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KartCategoryService.Integra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KartCategoryService.ContractTests", "tests\ContractTests\KartCategoryService.ContractTests.csproj", "{01BB7073-9F4C-4848-9C4D-718D8A9DE535}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "contracts", "contracts", "{5BA70E67-98F1-41AF-A520-ED8297D0B2B0}"
+	ProjectSection(SolutionItems) = preProject
+		contracts\README.md = contracts\README.md
+		contracts\api-contract.yaml = contracts\api-contract.yaml
+		contracts\message-bus-manifest.json = contracts\message-bus-manifest.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
