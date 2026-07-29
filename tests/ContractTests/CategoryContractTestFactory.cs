@@ -24,6 +24,11 @@ public sealed class CategoryContractTestFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Tells StartupConnectivityChecks to skip itself — this factory swaps the real
+        // repository/cache/messaging registrations below for in-memory fakes, so there's
+        // nothing for it to connect to.
+        builder.UseEnvironment("Testing");
+
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<ICategoryRepository>();

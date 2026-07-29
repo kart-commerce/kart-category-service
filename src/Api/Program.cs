@@ -1,9 +1,12 @@
+using KartCategoryService.Api;
+using KartCategoryService.Api.HealthChecks;
 using KartCategoryService.Api.Middleware;
 using KartCategoryService.Api.Security;
 using KartCategoryService.Application;
 using KartCategoryService.Infrastructure;
 using Kart.Shared.Configuration;
 using Kart.Shared.Observability;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +25,13 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// /health/live: process is up, no dependency check. /health/ready: this service's job depends
+// on Postgres being reachable AND migrated (a connectable-but-unmigrated database, e.g. a
+// missing category_outbox_events table, is not "ready") - matching kart-infra's service-chart
+// probe convention.
+builder.Services.AddHealthChecks()
+    .AddCheck<CategoryDbHealthCheck>("category-db", tags: ["ready"]);
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddCategoryAuthentication();
@@ -30,6 +40,8 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+
+await StartupConnectivityChecks.RunAsync(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -60,6 +72,9 @@ app.UseAuthorization();
 
 // Prometheus scrape target (observability-standards.md's mandatory `/metrics`).
 app.MapPrometheusScrapingEndpoint();
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 app.MapControllers();
 
