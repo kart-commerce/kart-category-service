@@ -41,7 +41,7 @@ public static class DependencyInjection
         services.AddKartRabbitMqConnectionFactory(sp =>
         {
             var options = sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
-            return new RabbitMqConnectionSettings(options.HostName);
+            return new RabbitMqConnectionSettings(options.HostName, UserName: options.UserName, Password: options.Password);
         });
         services.AddKartRabbitMqTopologyStartup();
         services.AddHostedService<OutboxRelayHostedService>();
