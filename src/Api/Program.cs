@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // kart-conventions.md Configuration Management: GlobalConfig external-secrets-file bootstrap,
 // shared across every service - never reimplemented per service. See appsettings.Local.json.example.
-builder.AddKartGlobalConfig();
+builder.AddKartGlobalConfig("kart-category-service");
 
 // kart-conventions.md Observability section: Serilog + OpenTelemetry SDK behind one DI call.
 builder.AddKartObservability("kart-category-service");
