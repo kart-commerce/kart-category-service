@@ -24,6 +24,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICategoryCache, RedisCategoryCache>();
+        services.AddScoped<IAttributeRepository, AttributeRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentPrincipal, HttpCurrentPrincipal>();

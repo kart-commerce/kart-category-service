@@ -1,6 +1,7 @@
 using Kart.Shared.Messaging;
 using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Common.Models;
+using KartCategoryService.Domain.Attributes;
 using KartCategoryService.Domain.Categories;
 using KartCategoryService.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Authentication;
@@ -22,6 +23,8 @@ public sealed class CategoryContractTestFactory : WebApplicationFactory<Program>
 {
     public InMemoryCategoryRepository Repository { get; } = new();
 
+    public InMemoryAttributeRepository AttributeRepository { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Tells StartupConnectivityChecks to skip itself — this factory swaps the real
@@ -36,6 +39,9 @@ public sealed class CategoryContractTestFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<ICategoryCache>();
             services.AddSingleton<ICategoryCache, NullCategoryCache>();
+
+            services.RemoveAll<IAttributeRepository>();
+            services.AddSingleton<IAttributeRepository>(AttributeRepository);
 
             services.RemoveAll<IUnitOfWork>();
             services.AddSingleton<IUnitOfWork, NoOpUnitOfWork>();
@@ -106,6 +112,37 @@ public sealed class InMemoryCategoryRepository : ICategoryRepository
             .Where(c => c.Status == CategoryStatus.Active && c.AncestorPath.Contains(categoryId))
             .ToList();
         return Task.FromResult<IReadOnlyList<Category>>(descendants);
+    }
+}
+
+public sealed class InMemoryAttributeRepository : IAttributeRepository
+{
+    public List<ProductAttribute> Attributes { get; } = new();
+
+    public Task<IReadOnlyList<ProductAttribute>> ListAsync(Guid? categoryId, bool includeDeprecated, CancellationToken cancellationToken)
+    {
+        IEnumerable<ProductAttribute> query = categoryId is { } id
+            ? Attributes.Where(a => a.CategoryId == id || a.CategoryId == null)
+            : Attributes;
+
+        if (!includeDeprecated)
+        {
+            query = query.Where(a => a.Status == AttributeStatus.Active);
+        }
+
+        return Task.FromResult<IReadOnlyList<ProductAttribute>>(query.OrderBy(a => a.Name).ToList());
+    }
+
+    public Task<ProductAttribute?> GetActiveByIdAsync(Guid attributeId, CancellationToken cancellationToken)
+    {
+        var match = Attributes.FirstOrDefault(a => a.Id == attributeId && a.Status == AttributeStatus.Active);
+        return Task.FromResult(match);
+    }
+
+    public Task AddAsync(ProductAttribute attribute, CancellationToken cancellationToken)
+    {
+        Attributes.Add(attribute);
+        return Task.CompletedTask;
     }
 }
 

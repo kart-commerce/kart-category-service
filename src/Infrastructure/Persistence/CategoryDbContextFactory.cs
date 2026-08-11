@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KartCategoryService.Infrastructure.Persistence;
 
@@ -21,6 +22,6 @@ public sealed class CategoryDbContextFactory : IDesignTimeDbContextFactory<Categ
         var optionsBuilder = new DbContextOptionsBuilder<CategoryDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
 
-        return new CategoryDbContext(optionsBuilder.Options);
+        return new CategoryDbContext(optionsBuilder.Options, NullLogger<CategoryDbContext>.Instance);
     }
 }

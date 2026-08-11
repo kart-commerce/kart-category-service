@@ -1,6 +1,7 @@
 using KartCategoryService.CategorySeeder;
 using KartCategoryService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 SeedOptions options;
 try
@@ -24,7 +25,7 @@ Console.WriteLine($"Seeding {options.Count:N0} categories (batch size {options.B
 var optionsBuilder = new DbContextOptionsBuilder<CategoryDbContext>();
 optionsBuilder.UseNpgsql(connectionString);
 
-await using var db = new CategoryDbContext(optionsBuilder.Options);
+await using var db = new CategoryDbContext(optionsBuilder.Options, NullLogger<CategoryDbContext>.Instance);
 
 try
 {

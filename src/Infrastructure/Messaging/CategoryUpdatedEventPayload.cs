@@ -12,6 +12,7 @@ public sealed record CategoryUpdatedEventPayload(
     string Name,
     Guid? ParentId,
     IReadOnlyList<Guid> Path,
+    int DisplayOrder,
     string Operation,
     DateTimeOffset OccurredAt)
 {
@@ -20,6 +21,7 @@ public sealed record CategoryUpdatedEventPayload(
         domainEvent.Name,
         domainEvent.ParentId,
         domainEvent.Path,
+        domainEvent.DisplayOrder,
         domainEvent.Operation.ToString().ToLowerInvariant(),
         domainEvent.OccurredAt);
 }

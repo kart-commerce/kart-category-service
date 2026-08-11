@@ -22,7 +22,7 @@ public sealed class CategoryRepository : ICategoryRepository
             query = query.Where(c => c.Status == CategoryStatus.Active);
         }
 
-        return await query.OrderBy(c => c.Name).ToListAsync(cancellationToken);
+        return await query.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name).ToListAsync(cancellationToken);
     }
 
     public async Task<Category?> GetActiveByIdAsync(Guid categoryId, CancellationToken cancellationToken)
