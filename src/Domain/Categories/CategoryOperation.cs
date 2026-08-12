@@ -9,5 +9,6 @@ public enum CategoryOperation
     Created,
     Renamed,
     Moved,
-    Deprecated
+    Deprecated,
+    Reordered
 }

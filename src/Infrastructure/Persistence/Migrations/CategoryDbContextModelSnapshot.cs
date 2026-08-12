@@ -23,6 +23,57 @@ namespace KartCategoryService.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("KartCategoryService.Domain.Attributes.ProductAttribute", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attribute_id");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("data_type");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId", "Status")
+                        .HasDatabaseName("idx_attributes_category_status");
+
+                    b.ToTable("attributes", (string)null);
+                });
+
             modelBuilder.Entity("KartCategoryService.Domain.Categories.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -41,6 +92,12 @@ namespace KartCategoryService.Infrastructure.Persistence.Migrations
                     b.Property<short>("Depth")
                         .HasColumnType("smallint")
                         .HasColumnName("depth");
+
+                    b.Property<int>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("display_order");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -77,6 +134,9 @@ namespace KartCategoryService.Infrastructure.Persistence.Migrations
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("_ancestorPath"), "gin");
 
+                    b.HasIndex("ParentId", "DisplayOrder")
+                        .HasDatabaseName("idx_categories_parent_display_order");
+
                     b.HasIndex("ParentId", "Status")
                         .HasDatabaseName("idx_categories_parent_status");
 
@@ -91,6 +151,59 @@ namespace KartCategoryService.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_categories_parent_not_self", "parent_id IS DISTINCT FROM category_id");
                         });
+                });
+
+            modelBuilder.Entity("KartCategoryService.Infrastructure.Messaging.AttributeOutboxEvent", b =>
+                {
+                    b.Property<Guid>("OutboxId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("outbox_id");
+
+                    b.Property<Guid>("AttributeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attribute_id");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("event_type");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("TraceParent")
+                        .HasColumnType("text")
+                        .HasColumnName("trace_parent");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("OutboxId");
+
+                    b.HasIndex("AttributeId");
+
+                    b.HasIndex("OccurredAt")
+                        .HasDatabaseName("idx_attribute_outbox_unpublished")
+                        .HasFilter("published_at IS NULL");
+
+                    b.ToTable("attribute_outbox_events", (string)null);
                 });
 
             modelBuilder.Entity("KartCategoryService.Infrastructure.Messaging.CategoryOutboxEvent", b =>
@@ -126,6 +239,10 @@ namespace KartCategoryService.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("published_at");
 
+                    b.Property<string>("TraceParent")
+                        .HasColumnType("text")
+                        .HasColumnName("trace_parent");
+
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasColumnType("text")
@@ -142,6 +259,41 @@ namespace KartCategoryService.Infrastructure.Persistence.Migrations
                     b.ToTable("category_outbox_events", (string)null);
                 });
 
+            modelBuilder.Entity("KartCategoryService.Domain.Attributes.ProductAttribute", b =>
+                {
+                    b.OwnsMany("KartCategoryService.Domain.Attributes.AttributeValue", "Values", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid")
+                                .HasColumnName("attribute_value_id");
+
+                            b1.Property<Guid>("AttributeId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("attribute_id");
+
+                            b1.Property<int>("DisplayOrder")
+                                .HasColumnType("integer")
+                                .HasColumnName("display_order");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("value");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("AttributeId")
+                                .HasDatabaseName("idx_attribute_values_attribute_id");
+
+                            b1.ToTable("attribute_values", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("AttributeId");
+                        });
+
+                    b.Navigation("Values");
+                });
+
             modelBuilder.Entity("KartCategoryService.Domain.Categories.Category", b =>
                 {
                     b.HasOne("KartCategoryService.Domain.Categories.Category", null)
@@ -149,6 +301,16 @@ namespace KartCategoryService.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_categories_parent_id");
+                });
+
+            modelBuilder.Entity("KartCategoryService.Infrastructure.Messaging.AttributeOutboxEvent", b =>
+                {
+                    b.HasOne("KartCategoryService.Domain.Attributes.ProductAttribute", null)
+                        .WithMany()
+                        .HasForeignKey("AttributeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_attribute_outbox_events_attribute_id");
                 });
 
             modelBuilder.Entity("KartCategoryService.Infrastructure.Messaging.CategoryOutboxEvent", b =>

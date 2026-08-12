@@ -29,6 +29,18 @@ public static class AuthenticationExtensions
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             .Configure<JwksSigningKeyResolver>((options, resolver) =>
             {
+                // Real bug found live-verifying the Category & Attribute Management (Admin)
+                // flow: every write endpoint (create/rename/move/deprecate/reorder) 403'd for
+                // every caller, always - never previously exercised end-to-end. The JWT bearer
+                // handler's default inbound-claim mapping silently renames the token's literal
+                // "roles" claim to the long ClaimTypes.Role URI
+                // (http://schemas.microsoft.com/ws/2008/06/identity/claims/role) before this
+                // policy's RequireClaim("roles", "admin") ever runs against it - so the claim
+                // this policy looks for was never actually present under that name. MapInboundClaims
+                // = false keeps the token's own claim types (matching this class's own doc comment,
+                // which already documented the *intended* shape - `new Claim("roles", role)` - just
+                // not that the default handler mutates it before Authorization sees it).
+                options.MapInboundClaims = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     // Identity's JwtAccessTokenGenerator sets neither `iss` nor `aud` on the tokens

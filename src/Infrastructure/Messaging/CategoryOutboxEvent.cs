@@ -27,11 +27,20 @@ public sealed class CategoryOutboxEvent
     public string CreatedBy { get; private set; } = string.Empty;
     public string UpdatedBy { get; private set; } = RelaySystemPrincipal;
 
+    /// <summary>
+    /// The originating HTTP request's `Activity.Current?.Id` (W3C traceparent), captured at this
+    /// row's single write choke point (CategoryDbContext.SaveChangesAsync) - not at any individual
+    /// command handler. Read back by the outbox relay (a background poller with no request context
+    /// of its own) so the publish span continues the *original* request's trace instead of starting
+    /// a disconnected new one. Null for rows written before this column existed.
+    /// </summary>
+    public string? TraceParent { get; private set; }
+
     private CategoryOutboxEvent()
     {
     }
 
-    public static CategoryOutboxEvent FromDomainEvent(CategoryUpdatedDomainEvent domainEvent, string actingPrincipal)
+    public static CategoryOutboxEvent FromDomainEvent(CategoryUpdatedDomainEvent domainEvent, string actingPrincipal, string? traceParent)
     {
         var payload = CategoryUpdatedEventPayload.FromDomainEvent(domainEvent);
 
@@ -44,6 +53,7 @@ public sealed class CategoryOutboxEvent
             OccurredAt = domainEvent.OccurredAt,
             CreatedBy = actingPrincipal,
             UpdatedBy = RelaySystemPrincipal,
+            TraceParent = traceParent,
         };
     }
 
@@ -51,4 +61,7 @@ public sealed class CategoryOutboxEvent
     {
         PublishedAt = publishedAt;
     }
+
+    public static implicit operator OutboxEventRecord(CategoryOutboxEvent e) => new(
+        e.OutboxId, e.EventType, e.Payload, e.OccurredAt, e.PublishedAt, e.TraceParent, publishedAt => e.MarkPublished(publishedAt));
 }

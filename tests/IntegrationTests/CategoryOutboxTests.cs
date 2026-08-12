@@ -2,6 +2,7 @@ using FluentAssertions;
 using KartCategoryService.Domain.Categories;
 using KartCategoryService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -31,7 +32,7 @@ public sealed class CategoryOutboxTests : IAsyncLifetime
             .UseNpgsql(_postgres.GetConnectionString())
             .Options;
 
-        _dbContext = new CategoryDbContext(options);
+        _dbContext = new CategoryDbContext(options, NullLogger<CategoryDbContext>.Instance);
         await _dbContext.Database.MigrateAsync();
     }
 
