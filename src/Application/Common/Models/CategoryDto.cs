@@ -13,6 +13,7 @@ public sealed record CategoryDto(
     Guid? ParentId,
     IReadOnlyList<Guid> AncestorPath,
     int Depth,
+    int DisplayOrder,
     string Status)
 {
     public static CategoryDto FromDomain(Category category) => new(
@@ -21,5 +22,6 @@ public sealed record CategoryDto(
         category.ParentId,
         category.AncestorPath,
         category.Depth,
+        category.DisplayOrder,
         category.Status.ToString().ToLowerInvariant());
 }

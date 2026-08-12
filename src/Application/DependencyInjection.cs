@@ -11,6 +11,10 @@ public static class DependencyInjection
         services.AddMediatR(configuration =>
         {
             configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+
+            // Registration order is pipeline order (outermost first) - Logging wraps
+            // Validation so every request's completion/duration is observed uniformly.
+            configuration.AddOpenBehavior(typeof(LoggingBehavior<,>));
             configuration.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
 

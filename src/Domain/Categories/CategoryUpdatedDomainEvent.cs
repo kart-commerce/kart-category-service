@@ -13,5 +13,6 @@ public sealed record CategoryUpdatedDomainEvent(
     string Name,
     Guid? ParentId,
     IReadOnlyList<Guid> Path,
+    int DisplayOrder,
     CategoryOperation Operation,
     DateTimeOffset OccurredAt) : IDomainEvent;

@@ -17,6 +17,7 @@ public sealed class Category : AggregateRoot
     public Guid? ParentId { get; private set; }
     public IReadOnlyList<Guid> AncestorPath => _ancestorPath.AsReadOnly();
     public int Depth { get; private set; }
+    public int DisplayOrder { get; private set; }
     public CategoryStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -41,6 +42,7 @@ public sealed class Category : AggregateRoot
         ParentId = parentId;
         _ancestorPath = ancestorPath.ToList();
         Depth = _ancestorPath.Count + 1;
+        DisplayOrder = 0;
         Status = CategoryStatus.Active;
         CreatedAt = now;
         UpdatedAt = now;
@@ -58,7 +60,7 @@ public sealed class Category : AggregateRoot
         }
 
         var category = new Category(Guid.NewGuid(), trimmed, parentId: null, ancestorPath: Array.Empty<Guid>(), actingPrincipal, now);
-        category.Raise(new CategoryUpdatedDomainEvent(category.Id, category.Name, category.ParentId, category.AncestorPath, CategoryOperation.Created, now));
+        category.Raise(new CategoryUpdatedDomainEvent(category.Id, category.Name, category.ParentId, category.AncestorPath, category.DisplayOrder, CategoryOperation.Created, now));
         return Result.Success(category);
     }
 
@@ -89,7 +91,7 @@ public sealed class Category : AggregateRoot
         }
 
         var category = new Category(Guid.NewGuid(), trimmed, parent.Id, newAncestorPath, actingPrincipal, now);
-        category.Raise(new CategoryUpdatedDomainEvent(category.Id, category.Name, category.ParentId, category.AncestorPath, CategoryOperation.Created, now));
+        category.Raise(new CategoryUpdatedDomainEvent(category.Id, category.Name, category.ParentId, category.AncestorPath, category.DisplayOrder, CategoryOperation.Created, now));
         return Result.Success(category);
     }
 
@@ -112,7 +114,32 @@ public sealed class Category : AggregateRoot
 
         Name = trimmed;
         Touch(actingPrincipal, now);
-        Raise(new CategoryUpdatedDomainEvent(Id, Name, ParentId, AncestorPath, CategoryOperation.Renamed, now));
+        Raise(new CategoryUpdatedDomainEvent(Id, Name, ParentId, AncestorPath, DisplayOrder, CategoryOperation.Renamed, now));
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Changes this category's position among its siblings (api-contract.yaml reorderCategory).
+    /// Purely cosmetic ordering - does not touch parentId/AncestorPath/Depth and carries none of
+    /// MoveTo's cycle/depth invariants. Negative values are rejected; ties among siblings are
+    /// broken by Name at the read side (ListCategoriesQueryHandler), so duplicate DisplayOrder
+    /// values across siblings are tolerated, not a domain error.
+    /// </summary>
+    public Result Reorder(int newDisplayOrder, string actingPrincipal, DateTimeOffset now)
+    {
+        if (Status != CategoryStatus.Active)
+        {
+            return Result.Failure(Error.NotFound($"Category '{Id}' is not found or already deprecated."));
+        }
+
+        if (newDisplayOrder < 0)
+        {
+            return Result.Failure(Error.Validation("DisplayOrder must be zero or a positive integer."));
+        }
+
+        DisplayOrder = newDisplayOrder;
+        Touch(actingPrincipal, now);
+        Raise(new CategoryUpdatedDomainEvent(Id, Name, ParentId, AncestorPath, DisplayOrder, CategoryOperation.Reordered, now));
         return Result.Success();
     }
 
@@ -130,7 +157,7 @@ public sealed class Category : AggregateRoot
 
         Status = CategoryStatus.Deprecated;
         Touch(actingPrincipal, now);
-        Raise(new CategoryUpdatedDomainEvent(Id, Name, ParentId, AncestorPath, CategoryOperation.Deprecated, now));
+        Raise(new CategoryUpdatedDomainEvent(Id, Name, ParentId, AncestorPath, DisplayOrder, CategoryOperation.Deprecated, now));
         return Result.Success();
     }
 
@@ -196,7 +223,7 @@ public sealed class Category : AggregateRoot
         _ancestorPath.AddRange(newAncestorPath);
         Depth = newDepth;
         Touch(actingPrincipal, now);
-        Raise(new CategoryUpdatedDomainEvent(Id, Name, ParentId, AncestorPath, CategoryOperation.Moved, now));
+        Raise(new CategoryUpdatedDomainEvent(Id, Name, ParentId, AncestorPath, DisplayOrder, CategoryOperation.Moved, now));
         return Result.Success();
     }
 

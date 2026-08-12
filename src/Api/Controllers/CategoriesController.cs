@@ -1,3 +1,4 @@
+using Kart.Shared.Observability;
 using KartCategoryService.Api.Common;
 using KartCategoryService.Api.Security;
 using KartCategoryService.Application.Common.Models;
@@ -6,21 +7,27 @@ using KartCategoryService.Application.Features.DeprecateCategory;
 using KartCategoryService.Application.Features.ListCategories;
 using KartCategoryService.Application.Features.MoveCategory;
 using KartCategoryService.Application.Features.RenameCategory;
+using KartCategoryService.Application.Features.ReorderCategory;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KartCategoryService.Api.Controllers;
 
+/// <summary>Every write action here belongs to the "Category & Attribute Management (Admin)" flow - KartFlowContext.Push wraps each one so every downstream log line (handler, persistence, outbox) inherits the Flow tag, mirroring kart-product-service's ProductsController convention. GET/list is unauthenticated public catalog browsing, not an admin-management action, so it's deliberately left untagged.</summary>
 [ApiController]
 [Route("v1/categories")]
 public sealed class CategoriesController : ControllerBase
 {
-    private readonly ISender _sender;
+    private const string FlowName = "CategoryAttributeManagementAdmin";
 
-    public CategoriesController(ISender sender)
+    private readonly ISender _sender;
+    private readonly ILogger<CategoriesController> _logger;
+
+    public CategoriesController(ISender sender, ILogger<CategoriesController> logger)
     {
         _sender = sender;
+        _logger = logger;
     }
 
     /// <summary>api-contract.yaml listCategories - GET /v1/categories. CanRead is unconditional (ddd-model.md).</summary>
@@ -46,6 +53,9 @@ public sealed class CategoriesController : ControllerBase
         [FromBody] CreateCategoryRequest request,
         CancellationToken cancellationToken)
     {
+        using var _ = KartFlowContext.Push(FlowName);
+        _logger.LogInformation("Stage {Stage}: create-category request received (parentId {ParentId})", "CategoryAdminRequestReceived", request.ParentId);
+
         var result = await _sender.Send(new CreateCategoryCommand(request.Name, request.ParentId), cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(
             result,
@@ -63,7 +73,29 @@ public sealed class CategoriesController : ControllerBase
         [FromBody] RenameCategoryRequest request,
         CancellationToken cancellationToken)
     {
+        using var _ = KartFlowContext.Push(FlowName);
+        _logger.LogInformation("Stage {Stage}: rename-category request received (categoryId {CategoryId})", "CategoryAdminRequestReceived", categoryId);
+
         var result = await _sender.Send(new RenameCategoryCommand(categoryId, request.Name), cancellationToken);
+        return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
+    }
+
+    /// <summary>api-contract.yaml reorderCategory - POST /v1/categories/{categoryId}/reorder (RBAC-gated, Admin only). Previously missing entirely - kart-admin-service's ReorderCategoryCommand has always called this exact route, so it 404'd on every reorder attempt until this endpoint was added.</summary>
+    [HttpPost("{categoryId:guid}/reorder")]
+    [Authorize(Policy = AuthenticationExtensions.AdminPolicy)]
+    [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CategoryDto>> ReorderCategory(
+        [FromRoute] Guid categoryId,
+        [FromBody] ReorderCategoryRequest request,
+        CancellationToken cancellationToken)
+    {
+        using var _ = KartFlowContext.Push(FlowName);
+        _logger.LogInformation("Stage {Stage}: reorder-category request received (categoryId {CategoryId}, displayOrder {DisplayOrder})", "CategoryAdminRequestReceived", categoryId, request.DisplayOrder);
+
+        var result = await _sender.Send(new ReorderCategoryCommand(categoryId, request.DisplayOrder), cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
 
@@ -79,6 +111,9 @@ public sealed class CategoriesController : ControllerBase
         [FromBody] MoveCategoryRequest request,
         CancellationToken cancellationToken)
     {
+        using var _ = KartFlowContext.Push(FlowName);
+        _logger.LogInformation("Stage {Stage}: move-category request received (categoryId {CategoryId})", "CategoryAdminRequestReceived", categoryId);
+
         var result = await _sender.Send(new MoveCategoryCommand(categoryId, request.NewParentId), cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
@@ -91,6 +126,9 @@ public sealed class CategoriesController : ControllerBase
     [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeprecateCategory([FromRoute] Guid categoryId, CancellationToken cancellationToken)
     {
+        using var _ = KartFlowContext.Push(FlowName);
+        _logger.LogInformation("Stage {Stage}: deprecate-category request received (categoryId {CategoryId})", "CategoryAdminRequestReceived", categoryId);
+
         var result = await _sender.Send(new DeprecateCategoryCommand(categoryId), cancellationToken);
         return result.IsSuccess ? NoContent() : this.MapFailure(result.Error);
     }
@@ -101,6 +139,9 @@ public sealed record CreateCategoryRequest(string Name, Guid? ParentId);
 
 /// <summary>api-contract.yaml renameCategory requestBody shape.</summary>
 public sealed record RenameCategoryRequest(string Name);
+
+/// <summary>api-contract.yaml reorderCategory requestBody shape.</summary>
+public sealed record ReorderCategoryRequest(int DisplayOrder);
 
 /// <summary>api-contract.yaml moveCategory requestBody shape.</summary>
 public sealed record MoveCategoryRequest(Guid? NewParentId);

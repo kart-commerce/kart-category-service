@@ -1,0 +1,14 @@
+{
+  "service": "kart-category-service",
+  "exchanges": [
+    { "name": "category.exchange", "type": "topic", "durable": true }
+  ],
+  "externalExchanges": [],
+  "publishedEvents": [
+    { "eventType": "CategoryUpdated", "exchange": "category.exchange", "routingKey": "category.category.updated" },
+    { "eventType": "AttributeUpdated", "exchange": "category.exchange", "routingKey": "category.attribute.updated" }
+  ],
+  "queues": [],
+  "deadLetterQueues": [],
+  "_comment": "Source of truth for this service's entire RabbitMQ topology (event-contract.md). Nothing here is hardcoded in C# - RabbitMqTopologyProvisioner scans this file and declares every exchange/queue/binding/DLQ/retry-tier at startup. Category/Attribute consume zero events (event-contract.md, 'Consumed Events: None'), so queues/deadLetterQueues are empty here - category.category-updated.dlq belongs to Analytics' own consumer queue, product.category-projection.dlq belongs to Product's own new consumer queue, not to this service's topology. AttributeUpdated (added for the Category & Attribute Management (Admin) flow) reuses the existing category.exchange rather than a new exchange - Attribute is a second aggregate in this same service/bounded context, not a separate one."
+}

@@ -43,6 +43,12 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .HasColumnType("smallint")
             .IsRequired();
 
+        builder.Property(c => c.DisplayOrder)
+            .HasColumnName("display_order")
+            .HasColumnType("integer")
+            .HasDefaultValue(0)
+            .IsRequired();
+
         builder.Property(c => c.Status)
             .HasColumnName("status")
             .HasColumnType("text")
@@ -64,6 +70,9 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         builder.HasIndex(c => new { c.ParentId, c.Status })
             .HasDatabaseName("idx_categories_parent_status");
+
+        builder.HasIndex(c => new { c.ParentId, c.DisplayOrder })
+            .HasDatabaseName("idx_categories_parent_display_order");
 
         builder.HasIndex(c => new { c.Status, c.Depth })
             .HasDatabaseName("idx_categories_status_depth");

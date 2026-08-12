@@ -41,7 +41,7 @@ public sealed class ListCategoriesQueryHandlerTests
     [Fact]
     public async Task Handle_OnCacheHit_ReturnsCachedValueWithoutTouchingRepository()
     {
-        var cached = new List<CategoryDto> { new(Guid.NewGuid(), "Cached", null, Array.Empty<Guid>(), 1, "active") };
+        var cached = new List<CategoryDto> { new(Guid.NewGuid(), "Cached", null, Array.Empty<Guid>(), 1, 0, "active") };
         _cache
             .Setup(c => c.GetChildrenAsync(null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
