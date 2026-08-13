@@ -4,6 +4,7 @@ using KartCategoryService.Api.Security;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Application.Features.CreateCategory;
 using KartCategoryService.Application.Features.DeprecateCategory;
+using KartCategoryService.Application.Features.GetCategory;
 using KartCategoryService.Application.Features.ListCategories;
 using KartCategoryService.Application.Features.MoveCategory;
 using KartCategoryService.Application.Features.RenameCategory;
@@ -40,6 +41,18 @@ public sealed class CategoriesController : ControllerBase
     {
         var categories = await _sender.Send(new ListCategoriesQuery(parentId, includeDeprecated), cancellationToken);
         return Ok(categories);
+    }
+
+    /// <summary>api-contract.yaml getCategory - GET /v1/categories/{categoryId}. Single-category
+    /// lookup by id (e.g. a storefront category page's own title) - CanRead is unconditional
+    /// (ddd-model.md), same as ListCategories. 404 if not found or deprecated.</summary>
+    [HttpGet("{categoryId:guid}")]
+    [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CategoryDto>> GetCategory([FromRoute] Guid categoryId, CancellationToken cancellationToken)
+    {
+        var category = await _sender.Send(new GetCategoryQuery(categoryId), cancellationToken);
+        return category is null ? NotFound() : Ok(category);
     }
 
     /// <summary>api-contract.yaml createCategory - POST /v1/categories (RBAC-gated, Admin only).</summary>
