@@ -64,7 +64,6 @@ public sealed class AttributesController : ControllerBase
             request.CategoryId,
             request.DataType,
             request.Values ?? []);
-        _logger.LogInformation("Stage {Stage}: dispatching CreateAttributeCommand (categoryId {CategoryId})", "CreateAttributeCommandDispatched", request.CategoryId);
         var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<AttributeDto, AttributeDto>(
             result,
@@ -87,7 +86,6 @@ public sealed class AttributesController : ControllerBase
         _logger.LogInformation("Stage {Stage}: update-attribute request received (attributeId {AttributeId})", "AttributeUpdateRequestReceived", attributeId);
 
         var command = new UpdateAttributeCommand(attributeId, request.Name, request.Values ?? []);
-        _logger.LogInformation("Stage {Stage}: dispatching UpdateAttributeCommand (attributeId {AttributeId})", "UpdateAttributeCommandDispatched", attributeId);
         var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<AttributeDto, AttributeDto>(result, attribute => Ok(attribute));
     }
@@ -104,7 +102,6 @@ public sealed class AttributesController : ControllerBase
         _logger.LogInformation("Stage {Stage}: deprecate-attribute request received (attributeId {AttributeId})", "AttributeDeprecateRequestReceived", attributeId);
 
         var command = new DeprecateAttributeCommand(attributeId);
-        _logger.LogInformation("Stage {Stage}: dispatching DeprecateAttributeCommand (attributeId {AttributeId})", "DeprecateAttributeCommandDispatched", attributeId);
         var result = await _sender.Send(command, cancellationToken);
         return result.IsSuccess ? NoContent() : this.MapFailure(result.Error);
     }

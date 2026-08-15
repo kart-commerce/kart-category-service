@@ -5,13 +5,11 @@ using Microsoft.Extensions.Logging;
 namespace KartCategoryService.Application.Common.Behaviors;
 
 /// <summary>
-/// requirement-spec.md's Observability NFR row: every command/query gets a structured
-/// Information log on completion, tagged with its own name and duration - the generic backbone
-/// that gives every MediatR request 100% log coverage regardless of whether its handler adds its
-/// own business-milestone log. Deliberately never logs the request/response objects themselves
-/// (only the request's type name), so this can't leak PII/internals by construction. Exceptions
-/// are intentionally left unlogged here and rethrown as-is: they're logged once, at the true
-/// boundary (the Api layer's GlobalExceptionHandler), not duplicated at every pipeline layer.
+/// Every command/query gets a structured Information log on completion, tagged with its own
+/// name and duration. Deliberately never logs the request/response objects themselves - only the
+/// request's type name - so this can't leak PII/internals by construction. Exceptions are left
+/// unlogged here and rethrown as-is: they're logged once, at the true boundary (the Api layer's
+/// GlobalExceptionHandler), not duplicated at every pipeline layer they pass through.
 /// </summary>
 public sealed class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
@@ -31,20 +29,10 @@ public sealed class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRe
         var requestName = typeof(TRequest).Name;
         var stopwatch = Stopwatch.StartNew();
 
-        // checkpoint-logging-standard.md taxonomy stage 3 ("<Command>HandlerStarted", first line
-        // inside Handle()) generalized here rather than duplicated in every handler - this
-        // behavior already wraps every MediatR request, so it's the one place that's true by
-        // construction instead of by every handler author remembering to add it.
-        _logger.LogInformation(
-            "Stage {Stage}: {RequestName} handler started",
-            $"{requestName}HandlerStarted",
-            requestName);
-
         var response = await next();
 
         _logger.LogInformation(
-            "Stage {Stage}: {RequestName} completed in {ElapsedMilliseconds}ms",
-            $"{requestName}Completed",
+            "{RequestName} completed in {ElapsedMilliseconds}ms",
             requestName,
             stopwatch.ElapsedMilliseconds);
 

@@ -60,17 +60,14 @@ public sealed class ReorderCategoryCommandHandler : IRequestHandler<ReorderCateg
         var siblings = await _repository.GetChildrenAsync(category.ParentId, includeDeprecated: false, cancellationToken);
         var siblingDtos = siblings.Select(CategoryDto.FromDomain).ToList();
         await _cache.SetChildrenAsync(category.ParentId, siblingDtos, cancellationToken);
-        _logger.LogInformation(
-            "Stage {Stage}: category-children cache refreshed for parent {ParentId} ({Count} children)",
-            "CategoryChildrenCachePersisted",
-            category.ParentId,
-            siblingDtos.Count);
 
         _logger.LogInformation(
-            "Stage {Stage}: category {CategoryId} reordered to displayOrder {DisplayOrder}",
+            "Stage {Stage}: category {CategoryId} reordered to displayOrder {DisplayOrder}, category-children cache refreshed for parent {ParentId} ({Count} children)",
             "CategoryReorderProcessCompleted",
             category.Id,
-            category.DisplayOrder);
+            category.DisplayOrder,
+            category.ParentId,
+            siblingDtos.Count);
 
         return Result.Success(CategoryDto.FromDomain(category));
     }

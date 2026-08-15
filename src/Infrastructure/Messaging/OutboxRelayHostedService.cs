@@ -127,9 +127,7 @@ public sealed class OutboxRelayHostedService : BackgroundService
             // `using var` (not an explicit `using (...) { }` block) so the publish Activity stays
             // current through the Stage log call below too - a real bug found live-verifying this
             // flow: an explicit block here closed the Activity before the log line executed,
-            // leaving OutboxEventPublished permanently untagged with any TraceId. Matches
-            // kart-admin-service's own OutboxRelayHostedService.PublishOne, which already got
-            // this right.
+            // leaving OutboxEventPublished permanently untagged with any TraceId.
             using var activity = RabbitMqTraceContext.StartPublishActivityFromStoredTraceParent(exchange, routingKey, outboxEvent.TraceParent, properties);
 
             channel.BasicPublish(

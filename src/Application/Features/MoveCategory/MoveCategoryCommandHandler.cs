@@ -47,9 +47,6 @@ public sealed class MoveCategoryCommandHandler : IRequestHandler<MoveCategoryCom
             return Result.Failure<CategoryDto>(Error.NotFound($"Category '{request.CategoryId}' not found or not active."));
         }
 
-        // Checkpoint-logging taxonomy stage 5 (DecisionBranch) - moving to root vs. moving under
-        // another parent is a meaningfully different code path (only the latter runs the
-        // cycle/ancestor-lookup checks below).
         if (request.NewParentId is { } newParentId)
         {
             _logger.LogInformation(

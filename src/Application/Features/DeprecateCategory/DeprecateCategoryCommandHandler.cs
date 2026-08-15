@@ -60,16 +60,13 @@ public sealed class DeprecateCategoryCommandHandler : IRequestHandler<DeprecateC
         var siblings = await _repository.GetChildrenAsync(category.ParentId, includeDeprecated: false, cancellationToken);
         var siblingDtos = siblings.Select(CategoryDto.FromDomain).ToList();
         await _cache.SetChildrenAsync(category.ParentId, siblingDtos, cancellationToken);
-        _logger.LogInformation(
-            "Stage {Stage}: category-children cache refreshed for parent {ParentId} ({Count} children)",
-            "CategoryChildrenCachePersisted",
-            category.ParentId,
-            siblingDtos.Count);
 
         _logger.LogInformation(
-            "Stage {Stage}: category {CategoryId} deprecated",
+            "Stage {Stage}: category {CategoryId} deprecated, category-children cache refreshed for parent {ParentId} ({Count} children)",
             "CategoryDeprecateProcessCompleted",
-            category.Id);
+            category.Id,
+            category.ParentId,
+            siblingDtos.Count);
 
         return Result.Success();
     }

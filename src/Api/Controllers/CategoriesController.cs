@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KartCategoryService.Api.Controllers;
 
-/// <summary>Every write action here belongs to the "Category & Attribute Management (Admin)" flow - KartFlowContext.Push wraps each one so every downstream log line (handler, persistence, outbox) inherits the Flow tag, mirroring kart-product-service's ProductsController convention. GET/list is unauthenticated public catalog browsing, not an admin-management action, so it's deliberately left untagged.</summary>
+/// <summary>Every write action here belongs to the "Category & Attribute Management (Admin)" flow - KartFlowContext.Push wraps each one so every downstream log line (handler, persistence, outbox) inherits the Flow tag. GET/list is unauthenticated public catalog browsing, not an admin-management action, so it's deliberately left untagged.</summary>
 [ApiController]
 [Route("v1/categories")]
 public sealed class CategoriesController : ControllerBase
@@ -70,7 +70,6 @@ public sealed class CategoriesController : ControllerBase
         _logger.LogInformation("Stage {Stage}: create-category request received (parentId {ParentId})", "CategoryCreateRequestReceived", request.ParentId);
 
         var command = new CreateCategoryCommand(request.Name, request.ParentId);
-        _logger.LogInformation("Stage {Stage}: dispatching CreateCategoryCommand (parentId {ParentId})", "CreateCategoryCommandDispatched", request.ParentId);
         var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(
             result,
@@ -92,7 +91,6 @@ public sealed class CategoriesController : ControllerBase
         _logger.LogInformation("Stage {Stage}: rename-category request received (categoryId {CategoryId})", "CategoryRenameRequestReceived", categoryId);
 
         var command = new RenameCategoryCommand(categoryId, request.Name);
-        _logger.LogInformation("Stage {Stage}: dispatching RenameCategoryCommand (categoryId {CategoryId})", "RenameCategoryCommandDispatched", categoryId);
         var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
@@ -113,7 +111,6 @@ public sealed class CategoriesController : ControllerBase
         _logger.LogInformation("Stage {Stage}: reorder-category request received (categoryId {CategoryId}, displayOrder {DisplayOrder})", "CategoryReorderRequestReceived", categoryId, request.DisplayOrder);
 
         var command = new ReorderCategoryCommand(categoryId, request.DisplayOrder);
-        _logger.LogInformation("Stage {Stage}: dispatching ReorderCategoryCommand (categoryId {CategoryId})", "ReorderCategoryCommandDispatched", categoryId);
         var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
@@ -134,7 +131,6 @@ public sealed class CategoriesController : ControllerBase
         _logger.LogInformation("Stage {Stage}: move-category request received (categoryId {CategoryId})", "CategoryMoveRequestReceived", categoryId);
 
         var command = new MoveCategoryCommand(categoryId, request.NewParentId);
-        _logger.LogInformation("Stage {Stage}: dispatching MoveCategoryCommand (categoryId {CategoryId})", "MoveCategoryCommandDispatched", categoryId);
         var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
@@ -151,7 +147,6 @@ public sealed class CategoriesController : ControllerBase
         _logger.LogInformation("Stage {Stage}: deprecate-category request received (categoryId {CategoryId})", "CategoryDeprecateRequestReceived", categoryId);
 
         var command = new DeprecateCategoryCommand(categoryId);
-        _logger.LogInformation("Stage {Stage}: dispatching DeprecateCategoryCommand (categoryId {CategoryId})", "DeprecateCategoryCommandDispatched", categoryId);
         var result = await _sender.Send(command, cancellationToken);
         return result.IsSuccess ? NoContent() : this.MapFailure(result.Error);
     }

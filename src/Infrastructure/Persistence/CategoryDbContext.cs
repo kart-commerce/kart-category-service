@@ -52,14 +52,10 @@ public sealed class CategoryDbContext : DbContext
             .Where(category => category.DomainEvents.Count > 0)
             .ToList();
 
-        // Domain-event -> outbox-row conversion happens before the write (EF needs the rows
-        // tracked to include them in this same SaveChanges call) - but the Stage logs must not:
-        // logging "persisted"/"outbox saved" here, before base.SaveChangesAsync below actually
-        // runs, is a real bug this flow's own live verification caught - a failed/rolled-back
-        // write (a timed-out client retry, a transient connection drop) still logged a false
-        // CategoryPersistedToDatabase/CategoryOutboxEventSaved claim for a row that was never
-        // committed. Every log call below now runs only after `result` confirms the write
-        // actually happened.
+        // The persisted/outbox-saved log below only runs after `result` confirms the write
+        // actually committed - a real bug this flow's own live verification caught: logging
+        // before base.SaveChangesAsync runs would still claim a persisted row for a
+        // failed/rolled-back write (a timed-out client retry, a transient connection drop).
         var categoryLogEntries = new List<(Guid Id, string Operation)>();
         foreach (var category in categoriesWithEvents)
         {
@@ -90,27 +86,19 @@ public sealed class CategoryDbContext : DbContext
         foreach (var (id, operation) in categoryLogEntries)
         {
             _logger.LogInformation(
-                "Stage {Stage}: category {CategoryId} persisted to categories table (operation {Operation})",
+                "Stage {Stage}: category {CategoryId} persisted to categories table (operation {Operation}), CategoryUpdated outbox event saved",
                 "CategoryPersistedToDatabase",
                 id,
                 operation);
-            _logger.LogInformation(
-                "Stage {Stage}: CategoryUpdated outbox event saved for category {CategoryId}",
-                "CategoryOutboxEventSaved",
-                id);
         }
 
         foreach (var (id, operation) in attributeLogEntries)
         {
             _logger.LogInformation(
-                "Stage {Stage}: attribute {AttributeId} persisted to attributes table (operation {Operation})",
+                "Stage {Stage}: attribute {AttributeId} persisted to attributes table (operation {Operation}), AttributeUpdated outbox event saved",
                 "AttributePersistedToDatabase",
                 id,
                 operation);
-            _logger.LogInformation(
-                "Stage {Stage}: AttributeUpdated outbox event saved for attribute {AttributeId}",
-                "AttributeOutboxEventSaved",
-                id);
         }
 
         foreach (var category in categoriesWithEvents)

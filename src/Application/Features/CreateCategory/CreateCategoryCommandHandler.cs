@@ -40,9 +40,6 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
         Result<Category> creationResult;
         if (request.ParentId is { } parentId)
         {
-            // Checkpoint-logging taxonomy stage 5 (DecisionBranch) - root vs. child creation is a
-            // meaningfully different code path (different invariants: CreateChild enforces
-            // parent-active + max-depth, CreateRoot enforces neither).
             _logger.LogInformation(
                 "Stage {Stage}: creating category under parent {ParentId}",
                 "CategoryCreateUnderParentBranch",
@@ -80,28 +77,24 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
         await _repository.AddAsync(category, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await RefreshParentChildrenCacheAsync(category.ParentId, cancellationToken);
+        var siblingCount = await RefreshParentChildrenCacheAsync(category.ParentId, cancellationToken);
 
         _logger.LogInformation(
-            "Stage {Stage}: category {CategoryId} ({Name}) created under parent {ParentId}",
+            "Stage {Stage}: category {CategoryId} ({Name}) created under parent {ParentId}, category-children cache refreshed ({Count} children)",
             "CategoryCreateProcessCompleted",
             category.Id,
             category.Name,
-            category.ParentId);
+            category.ParentId,
+            siblingCount);
 
         return Result.Success(CategoryDto.FromDomain(category));
     }
 
-    private async Task RefreshParentChildrenCacheAsync(Guid? parentId, CancellationToken cancellationToken)
+    private async Task<int> RefreshParentChildrenCacheAsync(Guid? parentId, CancellationToken cancellationToken)
     {
         var siblings = await _repository.GetChildrenAsync(parentId, includeDeprecated: false, cancellationToken);
         var dtos = siblings.Select(CategoryDto.FromDomain).ToList();
         await _cache.SetChildrenAsync(parentId, dtos, cancellationToken);
-
-        _logger.LogInformation(
-            "Stage {Stage}: category-children cache refreshed for parent {ParentId} ({Count} children)",
-            "CategoryChildrenCachePersisted",
-            parentId,
-            dtos.Count);
+        return dtos.Count;
     }
 }

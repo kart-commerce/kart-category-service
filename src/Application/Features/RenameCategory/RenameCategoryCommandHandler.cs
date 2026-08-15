@@ -60,17 +60,14 @@ public sealed class RenameCategoryCommandHandler : IRequestHandler<RenameCategor
         var siblings = await _repository.GetChildrenAsync(category.ParentId, includeDeprecated: false, cancellationToken);
         var siblingDtos = siblings.Select(CategoryDto.FromDomain).ToList();
         await _cache.SetChildrenAsync(category.ParentId, siblingDtos, cancellationToken);
-        _logger.LogInformation(
-            "Stage {Stage}: category-children cache refreshed for parent {ParentId} ({Count} children)",
-            "CategoryChildrenCachePersisted",
-            category.ParentId,
-            siblingDtos.Count);
 
         _logger.LogInformation(
-            "Stage {Stage}: category {CategoryId} renamed to {Name}",
+            "Stage {Stage}: category {CategoryId} renamed to {Name}, category-children cache refreshed for parent {ParentId} ({Count} children)",
             "CategoryRenameProcessCompleted",
             category.Id,
-            category.Name);
+            category.Name,
+            category.ParentId,
+            siblingDtos.Count);
 
         return Result.Success(CategoryDto.FromDomain(category));
     }
