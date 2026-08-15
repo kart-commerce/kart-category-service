@@ -2,6 +2,7 @@ using FluentAssertions;
 using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Features.DeprecateAttribute;
 using KartCategoryService.Domain.Attributes;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -17,7 +18,9 @@ public sealed class DeprecateAttributeCommandHandlerTests
     public DeprecateAttributeCommandHandlerTests()
     {
         _currentPrincipal.Setup(p => p.ActingPrincipal).Returns("admin-service-principal");
-        _handler = new DeprecateAttributeCommandHandler(_repository.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System);
+        _handler = new DeprecateAttributeCommandHandler(
+            _repository.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System,
+            NullLogger<DeprecateAttributeCommandHandler>.Instance);
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Application.Features.CreateCategory;
 using KartCategoryService.Domain.Categories;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -28,7 +29,8 @@ public sealed class CreateCategoryCommandHandlerTests
             _cache.Object,
             _unitOfWork.Object,
             _currentPrincipal.Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            NullLogger<CreateCategoryCommandHandler>.Instance);
     }
 
     [Fact]
