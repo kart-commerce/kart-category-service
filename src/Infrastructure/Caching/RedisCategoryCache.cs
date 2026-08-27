@@ -26,7 +26,7 @@ public sealed class RedisCategoryCache : ICategoryCache
         var database = _connectionMultiplexer.GetDatabase();
         var value = await database.StringGetAsync(ChildrenKey(parentId));
         return value.HasValue
-            ? JsonSerializer.Deserialize<List<CategoryDto>>(value!, SerializerOptions)
+            ? JsonSerializer.Deserialize<List<CategoryDto>>((string)value!, SerializerOptions)
             : null;
     }
 
