@@ -3,6 +3,7 @@ using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Application.Features.RenameCategory;
 using KartCategoryService.Domain.Categories;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -20,7 +21,8 @@ public sealed class RenameCategoryCommandHandlerTests
     {
         _currentPrincipal.Setup(p => p.ActingPrincipal).Returns("admin-service-principal");
         _handler = new RenameCategoryCommandHandler(
-            _repository.Object, _cache.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System);
+            _repository.Object, _cache.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System,
+            NullLogger<RenameCategoryCommandHandler>.Instance);
     }
 
     [Fact]

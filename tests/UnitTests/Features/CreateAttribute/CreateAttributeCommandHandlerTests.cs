@@ -3,6 +3,7 @@ using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Features.CreateAttribute;
 using KartCategoryService.Domain.Attributes;
 using KartCategoryService.Domain.Categories;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -20,7 +21,8 @@ public sealed class CreateAttributeCommandHandlerTests
     {
         _currentPrincipal.Setup(p => p.ActingPrincipal).Returns("admin-service-principal");
         _handler = new CreateAttributeCommandHandler(
-            _attributeRepository.Object, _categoryRepository.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System);
+            _attributeRepository.Object, _categoryRepository.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System,
+            NullLogger<CreateAttributeCommandHandler>.Instance);
     }
 
     [Fact]

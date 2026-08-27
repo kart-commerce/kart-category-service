@@ -4,6 +4,7 @@ using KartCategoryService.Api.Security;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Application.Features.CreateCategory;
 using KartCategoryService.Application.Features.DeprecateCategory;
+using KartCategoryService.Application.Features.GetCategory;
 using KartCategoryService.Application.Features.ListCategories;
 using KartCategoryService.Application.Features.MoveCategory;
 using KartCategoryService.Application.Features.RenameCategory;
@@ -14,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KartCategoryService.Api.Controllers;
 
-/// <summary>Every write action here belongs to the "Category & Attribute Management (Admin)" flow - KartFlowContext.Push wraps each one so every downstream log line (handler, persistence, outbox) inherits the Flow tag, mirroring kart-product-service's ProductsController convention. GET/list is unauthenticated public catalog browsing, not an admin-management action, so it's deliberately left untagged.</summary>
+/// <summary>Every write action here belongs to the "Category & Attribute Management (Admin)" flow - KartFlowContext.Push wraps each one so every downstream log line (handler, persistence, outbox) inherits the Flow tag. GET/list is unauthenticated public catalog browsing, not an admin-management action, so it's deliberately left untagged.</summary>
 [ApiController]
 [Route("v1/categories")]
 public sealed class CategoriesController : ControllerBase
@@ -42,6 +43,18 @@ public sealed class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
+    /// <summary>api-contract.yaml getCategory - GET /v1/categories/{categoryId}. Single-category
+    /// lookup by id (e.g. a storefront category page's own title) - CanRead is unconditional
+    /// (ddd-model.md), same as ListCategories. 404 if not found or deprecated.</summary>
+    [HttpGet("{categoryId:guid}")]
+    [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDto), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CategoryDto>> GetCategory([FromRoute] Guid categoryId, CancellationToken cancellationToken)
+    {
+        var category = await _sender.Send(new GetCategoryQuery(categoryId), cancellationToken);
+        return category is null ? NotFound() : Ok(category);
+    }
+
     /// <summary>api-contract.yaml createCategory - POST /v1/categories (RBAC-gated, Admin only).</summary>
     [HttpPost]
     [Authorize(Policy = AuthenticationExtensions.AdminPolicy)]
@@ -54,9 +67,10 @@ public sealed class CategoriesController : ControllerBase
         CancellationToken cancellationToken)
     {
         using var _ = KartFlowContext.Push(FlowName);
-        _logger.LogInformation("Stage {Stage}: create-category request received (parentId {ParentId})", "CategoryAdminRequestReceived", request.ParentId);
+        _logger.LogInformation("Stage {Stage}: create-category request received (parentId {ParentId})", "CategoryCreateRequestReceived", request.ParentId);
 
-        var result = await _sender.Send(new CreateCategoryCommand(request.Name, request.ParentId), cancellationToken);
+        var command = new CreateCategoryCommand(request.Name, request.ParentId);
+        var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(
             result,
             category => CreatedAtAction(nameof(ListCategories), new { parentId = category.ParentId }, category));
@@ -74,9 +88,10 @@ public sealed class CategoriesController : ControllerBase
         CancellationToken cancellationToken)
     {
         using var _ = KartFlowContext.Push(FlowName);
-        _logger.LogInformation("Stage {Stage}: rename-category request received (categoryId {CategoryId})", "CategoryAdminRequestReceived", categoryId);
+        _logger.LogInformation("Stage {Stage}: rename-category request received (categoryId {CategoryId})", "CategoryRenameRequestReceived", categoryId);
 
-        var result = await _sender.Send(new RenameCategoryCommand(categoryId, request.Name), cancellationToken);
+        var command = new RenameCategoryCommand(categoryId, request.Name);
+        var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
 
@@ -93,9 +108,10 @@ public sealed class CategoriesController : ControllerBase
         CancellationToken cancellationToken)
     {
         using var _ = KartFlowContext.Push(FlowName);
-        _logger.LogInformation("Stage {Stage}: reorder-category request received (categoryId {CategoryId}, displayOrder {DisplayOrder})", "CategoryAdminRequestReceived", categoryId, request.DisplayOrder);
+        _logger.LogInformation("Stage {Stage}: reorder-category request received (categoryId {CategoryId}, displayOrder {DisplayOrder})", "CategoryReorderRequestReceived", categoryId, request.DisplayOrder);
 
-        var result = await _sender.Send(new ReorderCategoryCommand(categoryId, request.DisplayOrder), cancellationToken);
+        var command = new ReorderCategoryCommand(categoryId, request.DisplayOrder);
+        var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
 
@@ -112,9 +128,10 @@ public sealed class CategoriesController : ControllerBase
         CancellationToken cancellationToken)
     {
         using var _ = KartFlowContext.Push(FlowName);
-        _logger.LogInformation("Stage {Stage}: move-category request received (categoryId {CategoryId})", "CategoryAdminRequestReceived", categoryId);
+        _logger.LogInformation("Stage {Stage}: move-category request received (categoryId {CategoryId})", "CategoryMoveRequestReceived", categoryId);
 
-        var result = await _sender.Send(new MoveCategoryCommand(categoryId, request.NewParentId), cancellationToken);
+        var command = new MoveCategoryCommand(categoryId, request.NewParentId);
+        var result = await _sender.Send(command, cancellationToken);
         return this.ToActionResult<CategoryDto, CategoryDto>(result, category => Ok(category));
     }
 
@@ -127,9 +144,10 @@ public sealed class CategoriesController : ControllerBase
     public async Task<IActionResult> DeprecateCategory([FromRoute] Guid categoryId, CancellationToken cancellationToken)
     {
         using var _ = KartFlowContext.Push(FlowName);
-        _logger.LogInformation("Stage {Stage}: deprecate-category request received (categoryId {CategoryId})", "CategoryAdminRequestReceived", categoryId);
+        _logger.LogInformation("Stage {Stage}: deprecate-category request received (categoryId {CategoryId})", "CategoryDeprecateRequestReceived", categoryId);
 
-        var result = await _sender.Send(new DeprecateCategoryCommand(categoryId), cancellationToken);
+        var command = new DeprecateCategoryCommand(categoryId);
+        var result = await _sender.Send(command, cancellationToken);
         return result.IsSuccess ? NoContent() : this.MapFailure(result.Error);
     }
 }

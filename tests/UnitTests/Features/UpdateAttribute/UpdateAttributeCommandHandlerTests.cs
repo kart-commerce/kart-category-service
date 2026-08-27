@@ -3,6 +3,7 @@ using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Features.CreateAttribute;
 using KartCategoryService.Application.Features.UpdateAttribute;
 using KartCategoryService.Domain.Attributes;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -18,7 +19,9 @@ public sealed class UpdateAttributeCommandHandlerTests
     public UpdateAttributeCommandHandlerTests()
     {
         _currentPrincipal.Setup(p => p.ActingPrincipal).Returns("admin-service-principal");
-        _handler = new UpdateAttributeCommandHandler(_repository.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System);
+        _handler = new UpdateAttributeCommandHandler(
+            _repository.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System,
+            NullLogger<UpdateAttributeCommandHandler>.Instance);
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using KartCategoryService.Application.Common.Interfaces;
 using KartCategoryService.Application.Common.Models;
 using KartCategoryService.Application.Features.MoveCategory;
 using KartCategoryService.Domain.Categories;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -24,7 +25,8 @@ public sealed class MoveCategoryCommandHandlerTests
             .ReturnsAsync(new List<Category>());
 
         _handler = new MoveCategoryCommandHandler(
-            _repository.Object, _cache.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System);
+            _repository.Object, _cache.Object, _unitOfWork.Object, _currentPrincipal.Object, TimeProvider.System,
+            NullLogger<MoveCategoryCommandHandler>.Instance);
     }
 
     [Fact]
